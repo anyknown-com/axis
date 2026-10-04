@@ -109,6 +109,9 @@ const wheel = (el: HTMLElement, init: WheelEventInit) => {
 	return event.defaultPrevented
 }
 
+// Synthetic fling with real time between the events, so it has a velocity.
+const wait = () => new Promise((resolve) => setTimeout(resolve, 16))
+
 describe("drag on x", () => {
 	it("scrolls by the dragged distance and flags the drag while it lasts", async () => {
 		const { el, z } = mount({ options: { momentum: false } })
@@ -361,8 +364,6 @@ describe("drag on x", () => {
 
 	it("leaves an instance alone once a listener destroyed it during the press", async () => {
 		const { el, z } = mount()
-		// Synthetic fling with real time between the events, so it has a velocity.
-		const wait = () => new Promise((resolve) => setTimeout(resolve, 16))
 		el.dispatchEvent(pointer("pointerdown", { pointerType: "mouse", button: 0 }))
 		for (const clientX of [140, 100]) {
 			await wait()
@@ -868,14 +869,57 @@ describe("nested instances", () => {
 	})
 })
 
-describe("holding scroll positions", () => {
-	const click = async (point: { x: number; y: number }, ms: number) => {
-		await commands.mouseMove(point.x, point.y)
-		await commands.mouseDown()
-		await new Promise((resolve) => setTimeout(resolve, ms))
-		await commands.mouseUp()
-	}
+const click = async (point: { x: number; y: number }, ms: number) => {
+	await commands.mouseMove(point.x, point.y)
+	await commands.mouseDown()
+	await new Promise((resolve) => setTimeout(resolve, ms))
+	await commands.mouseUp()
+}
 
+// Synthetic drags, by default on the first kanban column: (150, 200) is inside it. A press must land inside
+// the target's padding box, or it counts as a press on its scrollbar.
+const press = (target: HTMLElement, { x, y } = { x: 150, y: 200 }) =>
+	target.dispatchEvent(pointer("pointerdown", { pointerType: "mouse", button: 0, clientX: x, clientY: y }))
+const moveTo = (clientX: number, clientY: number) =>
+	window.dispatchEvent(pointer("pointermove", { pointerType: "mouse", buttons: 1, clientX, clientY }))
+const release = () => window.dispatchEvent(pointer("pointerup", { pointerType: "mouse", clientX: 100 }))
+
+// An x row with momentum whose second card holds a y column: a vertical drag on the column leaves the row
+// out. `visible` is a point on the part of the column the row shows, where a real press could land.
+const rowWithColumn = () => {
+	const row = mount({
+		inner: (i) =>
+			i === 1
+				? `<div style="height:100px;overflow-y:auto;scrollbar-width:none">${'<div style="height:100px"></div>'.repeat(5)}</div>`
+				: `${i}`,
+	})
+	const el = row.el.querySelector<HTMLElement>(".card > div")!
+	const column = { el, z: createAxis(el, { axis: "y", momentum: false }) }
+	cleanups.push(() => column.z.destroy())
+	const visible = () => {
+		const outer = row.el.getBoundingClientRect()
+		const inner = el.getBoundingClientRect()
+		const x = (Math.max(outer.left, inner.left) + Math.min(outer.right, inner.right)) / 2
+		return { x, y: inner.top + inner.height / 2 }
+	}
+	return { row, column, visible }
+}
+
+const fake = (el: HTMLElement) => ({
+	el,
+	onScrollbar: () => false,
+	accepts: () => true,
+	canScroll: () => true,
+	press: vi.fn(),
+	yield: vi.fn(),
+	start: vi.fn(),
+	move: vi.fn(),
+	pass: vi.fn(),
+	end: vi.fn(),
+	interrupt: vi.fn(),
+})
+
+describe("holding scroll positions", () => {
 	it.each<[string, (el: HTMLElement) => void, number]>([
 		["a scrollLeft write", (el) => (el.scrollLeft = 400), 400],
 		["scrollIntoView", (el) => el.children[5]!.scrollIntoView({ inline: "start", block: "nearest" }), 1000],
@@ -1013,14 +1057,6 @@ describe("holding scroll positions", () => {
 		expect(el.scrollLeft).toBe(300)
 	})
 
-	// Synthetic drags, by default on the first kanban column: (150, 200) is inside it. A press must land inside
-	// the target's padding box, or it counts as a press on its scrollbar.
-	const press = (target: HTMLElement, { x, y } = { x: 150, y: 200 }) =>
-		target.dispatchEvent(pointer("pointerdown", { pointerType: "mouse", button: 0, clientX: x, clientY: y }))
-	const moveTo = (clientX: number, clientY: number) =>
-		window.dispatchEvent(pointer("pointermove", { pointerType: "mouse", buttons: 1, clientX, clientY }))
-	const release = () => window.dispatchEvent(pointer("pointerup", { pointerType: "mouse", clientX: 100 }))
-
 	it("undoes a last autoscroll on the instances that did not own the drag", () => {
 		const { board, column } = kanban()
 		press(column.el)
@@ -1031,27 +1067,6 @@ describe("holding scroll positions", () => {
 		release()
 		expect(column.el.scrollTop).toBe(0)
 	})
-
-	// An x row with momentum whose second card holds a y column: a vertical drag on the column leaves the row
-	// out. `visible` is a point on the part of the column the row shows, where a real press could land.
-	const rowWithColumn = () => {
-		const row = mount({
-			inner: (i) =>
-				i === 1
-					? `<div style="height:100px;overflow-y:auto;scrollbar-width:none">${'<div style="height:100px"></div>'.repeat(5)}</div>`
-					: `${i}`,
-		})
-		const el = row.el.querySelector<HTMLElement>(".card > div")!
-		const column = { el, z: createAxis(el, { axis: "y", momentum: false }) }
-		cleanups.push(() => column.z.destroy())
-		const visible = () => {
-			const outer = row.el.getBoundingClientRect()
-			const inner = el.getBoundingClientRect()
-			const x = (Math.max(outer.left, inner.left) + Math.min(outer.right, inner.right)) / 2
-			return { x, y: inner.top + inner.height / 2 }
-		}
-		return { row, column, visible }
-	}
 
 	it("freezes the momentum of an outer instance and holds it while an inner one owns the drag", async () => {
 		const { row, column, visible } = rowWithColumn()
@@ -1126,19 +1141,6 @@ describe("holding scroll positions", () => {
 		const inner = document.createElement("div")
 		outer.append(inner)
 		document.body.append(outer)
-		const fake = (el: HTMLElement) => ({
-			el,
-			onScrollbar: () => false,
-			accepts: () => true,
-			canScroll: () => true,
-			press: vi.fn(),
-			yield: vi.fn(),
-			start: vi.fn(),
-			move: vi.fn(),
-			pass: vi.fn(),
-			end: vi.fn(),
-			interrupt: vi.fn(),
-		})
 		const owner = fake(inner)
 		const other = fake(outer)
 		const unregisterOther = register(other)
