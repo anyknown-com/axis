@@ -1,0 +1,6 @@
+{
+	"useTabs": true,
+	"printWidth": 110,
+	"semi": false,
+	"ignorePatterns": ["**/*.md", "**/*.html", "dist", "playground/dist"]
+}

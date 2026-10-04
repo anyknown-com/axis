@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>axis playground</title>
+		<link rel="stylesheet" href="./style.css" />
+	</head>
+	<body>
+		<header>
+			<h1>@anyknown/axis</h1>
+			<p>
+				Native scroll first, mouse drag as an enhancement, on x, y or both axes. Touch, trackpad, keyboard and
+				scrollbar stay native.
+			</p>
+			<label><input type="checkbox" id="wheel" /> Translate vertical wheel to horizontal (x instances only)</label>
+			<label><input type="checkbox" id="momentum" checked /> Momentum</label>
+		</header>
+
+		<main>
+			<section data-demo="plain" data-axis="x">
+				<h2>Plain card row</h2>
+				<p>No snap. Drag with the mouse, fling to see momentum.</p>
+				<div class="row" tabindex="0"></div>
+			</section>
+
+			<section data-demo="snap" data-axis="x">
+				<h2>scroll-snap</h2>
+				<p><code>scroll-snap-type: x mandatory</code>, cards align to start with <code>scroll-padding-inline: 16px</code>.</p>
+				<div class="row snap" tabindex="0"></div>
+			</section>
+
+			<section data-demo="interactive" data-axis="x">
+				<h2>Links, images and buttons</h2>
+				<p>Clicks still work; a click right after a drag is swallowed. Text input never starts a drag.</p>
+				<div class="row" tabindex="0"></div>
+				<output class="log">Click something…</output>
+			</section>
+
+			<section data-demo="rtl" data-axis="x" dir="rtl">
+				<h2>RTL</h2>
+				<p>scrollLeft runs from 0 to negative; state and prev/next stay logical.</p>
+				<div class="row snap" tabindex="0"></div>
+			</section>
+
+			<section data-demo="vertical" data-axis="y">
+				<h2>Vertical list</h2>
+				<p><code>axis: "y"</code> with <code>scroll-snap-type: y mandatory</code>.</p>
+				<div class="list" tabindex="0"></div>
+			</section>
+
+			<section data-demo="canvas" data-axis="both">
+				<h2>Canvas</h2>
+				<p><code>axis: "both"</code>: pan a 3000×3000 board freely in 2D. The cards are buttons.</p>
+				<div class="viewport" tabindex="0"><div class="canvas"></div></div>
+				<output class="log">Click a card…</output>
+			</section>
+
+			<section data-demo="kanban" data-axis="x">
+				<h2>Kanban</h2>
+				<p>
+					The board is <code>axis: "x"</code>, every column is <code>axis: "y"</code>. Drag vertically in a column to
+					scroll it, horizontally to scroll the board.
+				</p>
+				<div class="board" tabindex="0"></div>
+			</section>
+		</main>
+
+		<script type="module" src="./main.ts"></script>
+	</body>
+</html>

@@ -1,0 +1,7 @@
+node_modules
+dist
+playground/dist
+.DS_Store
+*.tsbuildinfo
+.vitest-attachments
+__screenshots__

@@ -1,0 +1,17 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"jsx": "react-jsx",
+		"strict": true,
+		"skipLibCheck": true,
+		"noEmit": true,
+		"verbatimModuleSyntax": true,
+		"types": ["node", "@vitest/browser-playwright"],
+		"allowImportingTsExtensions": true,
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"paths": { "@anyknown/axis": ["./src/index.ts"] }
+	},
+	"include": ["src", "test", "playground", "vitest.config.ts"]
+}

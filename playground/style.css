@@ -1,0 +1,233 @@
+:root {
+	color-scheme: light dark;
+	--bg: oklch(98% 0.005 250);
+	--fg: oklch(25% 0.02 250);
+	--muted: oklch(50% 0.02 250);
+	--card: oklch(100% 0 0);
+	--line: oklch(90% 0.01 250);
+	--grid: oklch(92% 0.01 250);
+	--accent: oklch(55% 0.18 255);
+	font-family: system-ui, sans-serif;
+	line-height: 1.5;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: oklch(18% 0.01 250);
+		--fg: oklch(93% 0.01 250);
+		--muted: oklch(70% 0.02 250);
+		--card: oklch(24% 0.01 250);
+		--line: oklch(32% 0.01 250);
+		--grid: oklch(26% 0.01 250);
+	}
+}
+
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--fg);
+}
+
+header,
+main {
+	max-width: 960px;
+	margin: 0 auto;
+	padding: 24px 16px;
+}
+
+header label {
+	display: inline-block;
+	margin-inline-end: 16px;
+}
+
+h1 {
+	margin: 0;
+}
+
+h2 {
+	margin: 0 0 4px;
+	font-size: 1.1rem;
+}
+
+section {
+	margin-bottom: 40px;
+}
+
+section > p,
+header p {
+	margin: 0 0 12px;
+	color: var(--muted);
+}
+
+/* All axis needs: a scroll container. */
+.row {
+	display: flex;
+	gap: 12px;
+	overflow-x: auto;
+	padding: 4px 16px 12px;
+	border-radius: 12px;
+	outline-offset: 2px;
+}
+
+.row.snap {
+	scroll-snap-type: x mandatory;
+	scroll-padding-inline: 16px;
+}
+
+.row.snap > .card,
+.list > .card {
+	scroll-snap-align: start;
+}
+
+.list {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	height: 360px;
+	max-width: 420px;
+	overflow-y: auto;
+	padding: 12px;
+	box-sizing: border-box;
+	border: 1px solid var(--line);
+	border-radius: 12px;
+	scroll-snap-type: y mandatory;
+	scroll-padding-block: 12px;
+}
+
+.list > .card {
+	flex: 0 0 auto;
+	min-height: 96px;
+}
+
+.viewport {
+	height: 420px;
+	overflow: auto;
+	border: 1px solid var(--line);
+	border-radius: 12px;
+}
+
+.canvas {
+	position: relative;
+	width: 3000px;
+	height: 3000px;
+	background-image:
+		linear-gradient(var(--grid) 1px, transparent 1px),
+		linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+	background-size: 50px 50px;
+}
+
+.canvas .card {
+	position: absolute;
+	width: 180px;
+	min-height: 0;
+	font: inherit;
+	color: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+
+.board {
+	display: flex;
+	gap: 12px;
+	overflow-x: auto;
+	padding-bottom: 8px;
+}
+
+.column {
+	flex: 0 0 240px;
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--line);
+	border-radius: 12px;
+	background: color-mix(in oklch, var(--card), var(--bg));
+}
+
+.column h3 {
+	margin: 0;
+	padding: 10px 12px 0;
+	font-size: 0.95rem;
+}
+
+.column .cards {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	height: 320px;
+	overflow-y: auto;
+	padding: 8px 12px;
+}
+
+.column .card {
+	flex: 0 0 auto;
+	min-height: 64px;
+	padding: 10px 12px;
+}
+
+.column .controls {
+	margin: 0;
+	padding: 0 12px 10px;
+}
+
+[data-axis-dragging] .card {
+	box-shadow: 0 6px 18px oklch(0% 0 0 / 0.12);
+}
+
+.card {
+	flex: 0 0 220px;
+	min-height: 140px;
+	padding: 16px;
+	box-sizing: border-box;
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	background: var(--card);
+	transition: box-shadow 150ms;
+}
+
+.card p {
+	margin: 4px 0 0;
+}
+
+.card img {
+	display: block;
+	width: 100%;
+	height: 90px;
+	border-radius: 6px;
+	object-fit: cover;
+	margin-bottom: 8px;
+}
+
+.card input {
+	width: 100%;
+	box-sizing: border-box;
+	margin-top: 8px;
+}
+
+a {
+	color: var(--accent);
+}
+
+.controls {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.controls button {
+	font: inherit;
+	padding: 4px 12px;
+}
+
+.state,
+.log {
+	display: block;
+	font-size: 0.8rem;
+	color: var(--muted);
+	font-variant-numeric: tabular-nums;
+	white-space: pre-line;
+}
+
+.log {
+	margin-top: 8px;
+}
