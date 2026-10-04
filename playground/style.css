@@ -59,7 +59,6 @@ header p {
 	color: var(--muted);
 }
 
-/* All axis needs: a scroll container. */
 .row {
 	display: flex;
 	gap: 12px;

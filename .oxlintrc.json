@@ -1,12 +1,58 @@
 {
 	"$schema": "./node_modules/oxlint/configuration_schema.json",
-	"plugins": ["react", "typescript", "unicorn"],
+	"plugins": ["typescript", "unicorn", "import", "react", "vitest"],
+	"jsPlugins": [{ "name": "stylistic", "specifier": "@stylistic/eslint-plugin" }],
 	"categories": {
 		"correctness": "error",
-		"suspicious": "warn"
+		"suspicious": "warn",
+		"perf": "warn"
 	},
-	"ignorePatterns": ["dist", "node_modules", "playground/dist"],
+	"ignorePatterns": ["dist", "node_modules", "playground/dist", "**/*.d.ts"],
 	"rules": {
-		"react/react-in-jsx-scope": "off"
+		"no-console": "warn",
+		"eqeqeq": "error",
+		"no-unused-vars": "error",
+		"typescript/no-explicit-any": "error",
+		"typescript/consistent-type-imports": "error",
+		"unicorn/filename-case": ["error", { "case": "kebabCase" }],
+		"import/no-cycle": "error",
+		"react/rules-of-hooks": "error",
+		"react/exhaustive-deps": "error",
+		"react/react-in-jsx-scope": "off",
+		"max-lines": ["error", { "max": 300, "skipBlankLines": true, "skipComments": true }],
+		"max-depth": ["error", 4],
+		"complexity": ["warn", 15],
+		"stylistic/padding-line-between-statements": [
+			"error",
+			{ "blankLine": "always", "prev": "*", "next": "return" },
+			{ "blankLine": "always", "prev": ["const", "let", "var", "using"], "next": "*" },
+			{
+				"blankLine": "any",
+				"prev": ["singleline-const", "singleline-let", "singleline-var", "singleline-using"],
+				"next": ["singleline-const", "singleline-let", "singleline-var", "singleline-using"]
+			},
+			{
+				"blankLine": "always",
+				"prev": "*",
+				"next": ["multiline-const", "multiline-let", "multiline-var", "multiline-using"]
+			},
+			{ "blankLine": "always", "prev": "block-like", "next": "*" },
+			{ "blankLine": "always", "prev": "*", "next": "block-like" },
+			{ "blankLine": "always", "prev": { "selector": "IfStatement" }, "next": "*" },
+			{ "blankLine": "always", "prev": "*", "next": { "selector": "IfStatement" } },
+			{
+				"blankLine": "any",
+				"prev": { "selector": "IfStatement", "lineMode": "singleline" },
+				"next": { "selector": "IfStatement", "lineMode": "singleline" }
+			},
+			{ "blankLine": "always", "prev": "*", "next": ["function", "class", "interface", "enum"] },
+			{ "blankLine": "always", "prev": ["function", "class", "interface", "enum"], "next": "*" },
+			{ "blankLine": "always", "prev": "*", "next": "multiline-type" },
+			{ "blankLine": "always", "prev": "multiline-type", "next": "*" },
+			{ "blankLine": "any", "prev": "import", "next": "import" },
+			{ "blankLine": "any", "prev": "directive", "next": "directive" },
+			{ "blankLine": "any", "prev": "case", "next": "*" },
+			{ "blankLine": "any", "prev": "*", "next": ["case", "default"] }
+		]
 	}
 }

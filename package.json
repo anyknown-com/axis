@@ -30,7 +30,7 @@
 	"typesVersions": {
 		"*": {
 			"react": [
-				"./dist/react.d.ts"
+				"./dist/react/index.d.ts"
 			]
 		}
 	},
@@ -40,8 +40,8 @@
 			"default": "./dist/index.js"
 		},
 		"./react": {
-			"types": "./dist/react.d.ts",
-			"default": "./dist/react.js"
+			"types": "./dist/react/index.d.ts",
+			"default": "./dist/react/index.js"
 		}
 	},
 	"publishConfig": {
@@ -50,7 +50,7 @@
 	"scripts": {
 		"build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/esm-extensions.mjs",
 		"typecheck": "tsc --noEmit",
-		"lint": "oxlint src test playground",
+		"lint": "oxlint --deny-warnings src test playground scripts vitest.config.ts",
 		"fmt": "oxfmt",
 		"fmt:check": "oxfmt --check",
 		"check": "pnpm typecheck && pnpm lint && pnpm fmt:check",
@@ -59,6 +59,7 @@
 		"prepublishOnly": "pnpm check && pnpm test && pnpm build"
 	},
 	"devDependencies": {
+		"@stylistic/eslint-plugin": "5.10.0",
 		"@types/node": "^26.4.0",
 		"@types/react": "^19.2.0",
 		"@types/react-dom": "^19.2.5",
