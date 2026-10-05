@@ -1,0 +1,137 @@
+# @anyknown/axis
+
+> Headless scroll primitive for horizontal rows, vertical lists and 2D canvases: native scroll first, mouse drag as an enhancement. You give it an element with `overflow: auto`; touch, trackpad, keyboard and scrollbar stay native. axis adds mouse drag-scrolling (x, y or both) with momentum, scroll-snap-aware release, optional wheel-to-horizontal for rows, nested-container hand-off, and an observable scroll state for prev/next buttons and progress bars. Framework-agnostic core plus an optional React hook.
+
+Key facts for writing code with this library:
+
+- Entry points: `@anyknown/axis` (core, `createAxis`) and `@anyknown/axis/react` (`useAxis`). ESM only. React 18 or 19 is an optional peer dependency; the core never imports it.
+- No CSS shipped, no required DOM structure, no wrapper elements. The container must be a real scroll container (`overflow-x: auto`, `overflow-y: auto` or `overflow: auto`) that you style yourself.
+- The native `scrollLeft` / `scrollTop` is the only source of truth. Nothing is moved with `transform`. There is no looping, no slide effects, no virtualisation.
+- Only primary-button mouse drags are taken over (after a 5px threshold). Touch and pen always scroll natively.
+- Use CSS `scroll-snap-type` / `scroll-snap-align` for snapping; there is no snap option. axis reads them and settles on snap positions itself.
+- All positions are logical: measured from the inline start edge, so they are positive in RTL too.
+
+## Vanilla usage
+
+```ts
+import { createAxis } from "@anyknown/axis"
+
+const row = document.querySelector<HTMLElement>(".row")! // display:flex; overflow-x:auto
+const axis = createAxis(row, { wheel: true })
+
+prev.addEventListener("click", () => axis.scrollPrev())
+next.addEventListener("click", () => axis.scrollNext())
+const unsubscribe = axis.subscribe((state) => {
+	prev.disabled = !state.x.canScrollPrev
+	next.disabled = !state.x.canScrollNext
+})
+
+// teardown: removes listeners/observers and restores every inline style and attribute axis changed
+unsubscribe()
+axis.destroy()
+```
+
+Vertical list: `createAxis(list, { axis: "y" })`. Pannable canvas: `createAxis(viewport, { axis: "both" })` with one large child.
+
+## React usage
+
+```tsx
+import { useAxis } from "@anyknown/axis/react"
+
+function Row({ items }: { items: string[] }) {
+	const { ref, state, api } = useAxis<HTMLDivElement>({ wheel: true })
+	return (
+		<>
+			<div ref={ref} className="row">
+				{items.map((item) => <div key={item} className="card">{item}</div>)}
+			</div>
+			<button disabled={!state.x.canScrollPrev} onClick={() => api.scrollPrev()}>Prev</button>
+			<button disabled={!state.x.canScrollNext} onClick={() => api.scrollNext()}>Next</button>
+		</>
+	)
+}
+```
+
+- `ref` is a stable callback ref. Merge with your own ref inline: `ref={(el) => { mine.current = el; ref(el) }}`.
+- The instance is created on mount, destroyed on unmount, and moved when the ref is attached to another element. Options may be an inline object literal; changes are applied in place without re-creating the instance.
+- `state` uses `useSyncExternalStore` and is SSR-safe. `api` (`scrollPrev`, `scrollNext`, `scrollTo`, `refresh`) is stable and a no-op before mount.
+- Selector to avoid re-rendering on every scrolled pixel: `const { ref, state: canNext, api } = useAxis(undefined, (s) => s.x.canScrollNext)`. Compared with `Object.is`; return a primitive or an existing object (`(s) => s.x`), never a freshly built object/array. Inline selectors are fine (no `useCallback` needed).
+- Do NOT pass type arguments together with a selector: `useAxis<HTMLDivElement>(undefined, selector)` does not compile. Omit them; `ref` then accepts any HTML element.
+
+## API
+
+`createAxis(el: HTMLElement, options?: AxisOptions): AxisInstance`
+
+```ts
+type AxisMode = "x" | "y" | "both"
+type AxisName = "x" | "y"
+
+interface AxisOptions {
+	axis?: AxisMode // default "x". "x" ignores vertical mouse movement, "y" the mirror, "both" pans freely in 2D
+	momentum?: boolean // default true. Glide after a fast drag. Never applied under prefers-reduced-motion
+	wheel?: boolean // default false. Vertical wheel -> horizontal scroll. ONLY used with axis: "x"; ignored otherwise
+	cursor?: boolean // default true. cursor: grab / grabbing on the container
+}
+
+interface AxisInstance {
+	getState(): AxisScrollState // replaced (never mutated) when a value changes
+	subscribe(listener: (state: AxisScrollState) => void): () => void
+	scrollPrev(axis?: AxisName): void // previous snap position, or back 90% of the visible size when not snapping
+	scrollNext(axis?: AxisName): void // next snap position, or forward 90% of the visible size
+	scrollTo(position: { x?: number; y?: number }, options?: { animate?: boolean }): void // logical px; animate defaults to true
+	setOptions(options: AxisOptions): void // partial; missing/undefined keys keep their value
+	refresh(): void // re-read layout and snap positions; rarely needed
+	destroy(): void
+}
+
+interface AxisScrollState {
+	x: AxisState // both axes are always reported, whatever `axis` is
+	y: AxisState
+	isDragging: boolean // a mouse drag is scrolling the container
+	isMomentum: boolean // gliding after a drag (momentum or settling on a snap position)
+}
+
+interface AxisState {
+	scroll: number // logical px from the start edge, 0..maxScroll
+	maxScroll: number // 0 when the content fits
+	progress: number // scroll / maxScroll, 0..1 (0 when content fits)
+	canScrollPrev: boolean // more than 1px from the start edge
+	canScrollNext: boolean // more than 1px from the end edge
+}
+```
+
+Exported types: `AxisInstance`, `AxisMode`, `AxisName`, `AxisOptions`, `AxisPosition`, `AxisScrollState`, `AxisScrollToOptions`, `AxisState` (from both entry points), plus `AxisApi` and `UseAxisResult` from `@anyknown/axis/react`.
+
+## Behaviour and gotchas
+
+- With `axis: "both"`, `scrollPrev()` / `scrollNext()` have no default axis and THROW unless you pass `"x"` or `"y"`.
+- `scrollTo` missing axes stay put. Under `prefers-reduced-motion: reduce`, `scrollTo` and prev/next jump instead of animating.
+- Presses inside `input`, `textarea`, `select`, `[contenteditable]` or any element with the `data-axis-no-drag` attribute never start a drag. Use `data-axis-no-drag` on sliders, resize handles, draggable items, etc.
+- While dragging, the container has the `data-axis-dragging` attribute (style it with `[data-axis-dragging]`), plus `cursor: grabbing` and `user-select: none`.
+- After a real drag, the next `click` is swallowed once (capture phase), so releasing over a link or button does not activate it. Normal clicks (under 5px movement) are unaffected.
+- With `wheel: true` on an `"x"` row, at the edge in the wheel's direction the event is left alone so the page scrolls on.
+- State updates automatically on scroll, resize (ResizeObserver on container and children) and DOM mutations (children added/removed, `class`/`style`/`dir` changes inside the container, `dir` on ancestors). Call `refresh()` only for changes axis cannot see: a `class` change on an ancestor, or a stylesheet/media query that changes `scroll-padding`, `scroll-margin` or `scroll-snap-align` without resizing anything.
+- Only direct children of the container are read as snap areas.
+- `proximity` snapping is settled like `mandatory` on drag release.
+- Overlay scrollbars (macOS default) cannot be distinguished from content, so a mouse press on an overlay scrollbar thumb starts a drag.
+- Horizontal writing modes only. RTL uses the modern `scrollLeft` model (0 to negative); axis converts it to logical positions for x.
+
+## Nested containers
+
+All instances in a window share one coordinator; just call `createAxis` / `useAxis` on each container, no extra setup. When a drag passes the 5px threshold, the coordinator takes its dominant direction and walks instances under the pointer from innermost outwards, giving the drag to the first instance whose `axis` covers that direction and can still scroll that way (edge hand-off like native overscroll chaining). The owner does not change for the rest of the drag.
+
+Kanban pattern: board is `axis: "x"`, each column is `axis: "y"`. Vertical drags scroll the column under the pointer, horizontal drags scroll the board.
+
+## When not to use it
+
+Choose a transform-based carousel (Embla, Keen Slider) instead when you need looping, slide transitions, or full control of motion on touch devices. axis is for native-feeling rows, lists and canvases that also drag with a mouse.
+
+## Docs
+
+- [README](https://github.com/anyknown-com/axis/blob/main/README.md): full documentation, including detailed behaviour of holds, momentum, snapping and the coordinator
+- [Core types](https://github.com/anyknown-com/axis/blob/main/src/axis/types.ts): `AxisOptions`, `AxisInstance`, `AxisScrollState` with doc comments
+- [React types](https://github.com/anyknown-com/axis/blob/main/src/react/types.ts): `AxisApi`, `UseAxisResult`
+
+## Optional
+
+- [Playground](https://github.com/anyknown-com/axis/tree/main/playground): runnable examples (kanban columns, scattered canvas cards, toggling options, multiple instances)
